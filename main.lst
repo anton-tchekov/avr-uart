@@ -1,0 +1,91 @@
+   1               		.file	"main.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               		.section	.text.startup,"ax",@progbits
+  11               	.global	main
+  13               	main:
+  14               	.LFB1:
+  15               		.file 1 "main.c"
+   1:main.c        **** #include "uart.h"
+   2:main.c        **** #include <avr/pgmspace.h>
+   3:main.c        **** 
+   4:main.c        **** int main(void)
+   5:main.c        **** {
+  16               		.loc 1 5 1 view -0
+  17               		.cfi_startproc
+  18               	/* prologue: function */
+  19               	/* frame size = 0 */
+  20               	/* stack size = 0 */
+  21               	.L__stack_usage = 0
+   6:main.c        **** 	int16_t c;
+  22               		.loc 1 6 2 view .LVU1
+   7:main.c        **** 	uart_init();
+  23               		.loc 1 7 2 view .LVU2
+  24 0000 00D0      		rcall uart_init
+  25               	.LVL0:
+   8:main.c        **** 	uart_tx_str_P(PSTR("Hello World!"));
+  26               		.loc 1 8 2 view .LVU3
+  27               	.LBB2:
+  28               		.loc 1 8 16 view .LVU4
+  29               		.loc 1 8 16 view .LVU5
+  30               	.LBE2:
+  31               		.loc 1 8 2 is_stmt 0 view .LVU6
+  32 0002 80E0      		ldi r24,lo8(__c.0)
+  33 0004 90E0      		ldi r25,hi8(__c.0)
+  34 0006 00D0      		rcall uart_tx_str_P
+  35               	.LVL1:
+  36               	.L2:
+   9:main.c        **** 	for(;;)
+  37               		.loc 1 9 2 is_stmt 1 view .LVU7
+  10:main.c        **** 	{
+  11:main.c        **** 		c = uart_rx();
+  38               		.loc 1 11 3 view .LVU8
+  39               		.loc 1 11 7 is_stmt 0 view .LVU9
+  40 0008 00D0      		rcall uart_rx
+  41               	.LVL2:
+  12:main.c        **** 		if(c > 0)
+  42               		.loc 1 12 3 is_stmt 1 view .LVU10
+  43               		.loc 1 12 5 is_stmt 0 view .LVU11
+  44 000a 1816      		cp __zero_reg__,r24
+  45 000c 1906      		cpc __zero_reg__,r25
+  46 000e 04F4      		brge .L2
+  13:main.c        **** 		{
+  14:main.c        **** 			uart_tx(c);
+  47               		.loc 1 14 4 is_stmt 1 view .LVU12
+  48 0010 00D0      		rcall uart_tx
+  49               	.LVL3:
+  50               		.loc 1 14 4 is_stmt 0 view .LVU13
+  51 0012 00C0      		rjmp .L2
+  52               		.cfi_endproc
+  53               	.LFE1:
+  55               		.section	.progmem.data,"a",@progbits
+  58               	__c.0:
+  59 0000 4865 6C6C 		.string	"Hello World!"
+  59      6F20 576F 
+  59      726C 6421 
+  59      00
+  60               		.text
+  61               	.Letext0:
+  62               		.file 2 "uart.h"
+  63               		.file 3 "/usr/avr/include/stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 main.c
+     /tmp/ccrjfr13.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccrjfr13.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccrjfr13.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccrjfr13.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccrjfr13.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccrjfr13.s:13     .text.startup:0000000000000000 main
+     /tmp/ccrjfr13.s:58     .progmem.data:0000000000000000 __c.0
+
+UNDEFINED SYMBOLS
+uart_init
+uart_tx_str_P
+uart_rx
+uart_tx

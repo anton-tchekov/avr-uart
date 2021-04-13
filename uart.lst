@@ -1,0 +1,574 @@
+   1               		.file	"uart.c"
+   2               	__SP_H__ = 0x3e
+   3               	__SP_L__ = 0x3d
+   4               	__SREG__ = 0x3f
+   5               	__tmp_reg__ = 0
+   6               	__zero_reg__ = 1
+   7               		.text
+   8               	.Ltext0:
+   9               		.cfi_sections	.debug_frame
+  10               	.global	uart_init
+  12               	uart_init:
+  13               	.LFB1:
+  14               		.file 1 "uart.c"
+   1:uart.c        **** #include "uart.h"
+   2:uart.c        **** #include <avr/io.h>
+   3:uart.c        **** #include <avr/interrupt.h>
+   4:uart.c        **** #include <avr/pgmspace.h>
+   5:uart.c        **** 
+   6:uart.c        **** #define UART_RECEIVE_BUFFER_SIZE  16
+   7:uart.c        **** #define UART_TRANSMIT_BUFFER_SIZE 16
+   8:uart.c        **** #define _BAUD                       (((F_CPU / (UART_BAUD * 16UL))) - 1)
+   9:uart.c        **** 
+  10:uart.c        **** /* receive buffer */
+  11:uart.c        **** static volatile uint8_t _avail;
+  12:uart.c        **** static volatile char _rb_start[UART_RECEIVE_BUFFER_SIZE],
+  13:uart.c        **** 	*_rb_end, *_rb_read, *_rb_write;
+  14:uart.c        **** 
+  15:uart.c        **** /* transmit buffer */
+  16:uart.c        **** static volatile uint8_t _tb_available;
+  17:uart.c        **** static volatile char _tb_start[UART_TRANSMIT_BUFFER_SIZE],
+  18:uart.c        **** 	*_tb_end, *_tb_read, *_tb_write;
+  19:uart.c        **** 
+  20:uart.c        **** void uart_init(void)
+  21:uart.c        **** {
+  15               		.loc 1 21 1 view -0
+  16               		.cfi_startproc
+  17               	/* prologue: function */
+  18               	/* frame size = 0 */
+  19               	/* stack size = 0 */
+  20               	.L__stack_usage = 0
+  22:uart.c        **** 	UCSR0B = (1 << RXCIE0) | (1 << UDRIE0) | (1 << RXEN0) | (1 << TXEN0);
+  21               		.loc 1 22 2 view .LVU1
+  22               		.loc 1 22 9 is_stmt 0 view .LVU2
+  23 0000 88EB      		ldi r24,lo8(-72)
+  24 0002 8093 C100 		sts 193,r24
+  23:uart.c        **** 	UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
+  25               		.loc 1 23 2 is_stmt 1 view .LVU3
+  26               		.loc 1 23 9 is_stmt 0 view .LVU4
+  27 0006 86E0      		ldi r24,lo8(6)
+  28 0008 8093 C200 		sts 194,r24
+  24:uart.c        **** 	UBRR0 = _BAUD;
+  29               		.loc 1 24 2 is_stmt 1 view .LVU5
+  30               		.loc 1 24 8 is_stmt 0 view .LVU6
+  31 000c 8FE5      		ldi r24,lo8(95)
+  32 000e 90E0      		ldi r25,0
+  33 0010 9093 C500 		sts 196+1,r25
+  34 0014 8093 C400 		sts 196,r24
+  25:uart.c        **** 	_rb_read = _rb_write = _rb_start;
+  35               		.loc 1 25 2 is_stmt 1 view .LVU7
+  36               		.loc 1 25 23 is_stmt 0 view .LVU8
+  37 0018 80E0      		ldi r24,lo8(_rb_start)
+  38 001a 90E0      		ldi r25,hi8(_rb_start)
+  39 001c 9093 0000 		sts _rb_write+1,r25
+  40 0020 8093 0000 		sts _rb_write,r24
+  41               		.loc 1 25 11 view .LVU9
+  42 0024 9093 0000 		sts _rb_read+1,r25
+  43 0028 8093 0000 		sts _rb_read,r24
+  26:uart.c        **** 	_tb_read = _tb_write = _tb_start;
+  44               		.loc 1 26 2 is_stmt 1 view .LVU10
+  45               		.loc 1 26 23 is_stmt 0 view .LVU11
+  46 002c 80E0      		ldi r24,lo8(_tb_start)
+  47 002e 90E0      		ldi r25,hi8(_tb_start)
+  48 0030 9093 0000 		sts _tb_write+1,r25
+  49 0034 8093 0000 		sts _tb_write,r24
+  50               		.loc 1 26 11 view .LVU12
+  51 0038 9093 0000 		sts _tb_read+1,r25
+  52 003c 8093 0000 		sts _tb_read,r24
+  53               	/* epilogue start */
+  27:uart.c        **** }
+  54               		.loc 1 27 1 view .LVU13
+  55 0040 0895      		ret
+  56               		.cfi_endproc
+  57               	.LFE1:
+  59               	.global	uart_available
+  61               	uart_available:
+  62               	.LFB2:
+  28:uart.c        **** 
+  29:uart.c        **** uint8_t uart_available(void)
+  30:uart.c        **** {
+  63               		.loc 1 30 1 is_stmt 1 view -0
+  64               		.cfi_startproc
+  65               	/* prologue: function */
+  66               	/* frame size = 0 */
+  67               	/* stack size = 0 */
+  68               	.L__stack_usage = 0
+  31:uart.c        **** 	return _avail;
+  69               		.loc 1 31 2 view .LVU15
+  70               		.loc 1 31 9 is_stmt 0 view .LVU16
+  71 0042 8091 0000 		lds r24,_avail
+  72               	/* epilogue start */
+  32:uart.c        **** }
+  73               		.loc 1 32 1 view .LVU17
+  74 0046 0895      		ret
+  75               		.cfi_endproc
+  76               	.LFE2:
+  78               	.global	uart_tx
+  80               	uart_tx:
+  81               	.LVL0:
+  82               	.LFB3:
+  33:uart.c        **** 
+  34:uart.c        **** void uart_tx(char c)
+  35:uart.c        **** {
+  83               		.loc 1 35 1 is_stmt 1 view -0
+  84               		.cfi_startproc
+  85               	/* prologue: function */
+  86               	/* frame size = 0 */
+  87               	/* stack size = 0 */
+  88               	.L__stack_usage = 0
+  36:uart.c        **** 	if(UCSR0A & (1 << UDRE0))
+  89               		.loc 1 36 2 view .LVU19
+  90               		.loc 1 36 5 is_stmt 0 view .LVU20
+  91 0048 9091 C000 		lds r25,192
+  92               		.loc 1 36 4 view .LVU21
+  93 004c 95FF      		sbrs r25,5
+  94 004e 00C0      		rjmp .L4
+  37:uart.c        **** 	{
+  38:uart.c        **** 		UDR0 = c;
+  95               		.loc 1 38 3 is_stmt 1 view .LVU22
+  96               		.loc 1 38 8 is_stmt 0 view .LVU23
+  97 0050 8093 C600 		sts 198,r24
+  98 0054 0895      		ret
+  99               	.L4:
+ 100               	.LBB4:
+ 101               	.LBB5:
+  39:uart.c        **** 	}
+  40:uart.c        **** 	else
+  41:uart.c        **** 	{
+  42:uart.c        **** 		while(_tb_available >= UART_TRANSMIT_BUFFER_SIZE - 1) ;
+ 102               		.loc 1 42 57 is_stmt 1 view .LVU24
+ 103               		.loc 1 42 8 view .LVU25
+ 104               		.loc 1 42 23 is_stmt 0 view .LVU26
+ 105 0056 9091 0000 		lds r25,_tb_available
+ 106               		.loc 1 42 8 view .LVU27
+ 107 005a 9F30      		cpi r25,lo8(15)
+ 108 005c 00F4      		brsh .L4
+  43:uart.c        **** 
+  44:uart.c        **** 		++_tb_available;
+ 109               		.loc 1 44 3 is_stmt 1 view .LVU28
+ 110 005e 9091 0000 		lds r25,_tb_available
+ 111 0062 9F5F      		subi r25,lo8(-(1))
+ 112 0064 9093 0000 		sts _tb_available,r25
+  45:uart.c        **** 		*_tb_write++ = c;
+ 113               		.loc 1 45 3 view .LVU29
+ 114               		.loc 1 45 13 is_stmt 0 view .LVU30
+ 115 0068 E091 0000 		lds r30,_tb_write
+ 116 006c F091 0000 		lds r31,_tb_write+1
+ 117 0070 9F01      		movw r18,r30
+ 118 0072 2F5F      		subi r18,-1
+ 119 0074 3F4F      		sbci r19,-1
+ 120 0076 3093 0000 		sts _tb_write+1,r19
+ 121 007a 2093 0000 		sts _tb_write,r18
+ 122               		.loc 1 45 16 view .LVU31
+ 123 007e 8083      		st Z,r24
+  46:uart.c        **** 		if(_tb_write == _tb_end)
+ 124               		.loc 1 46 3 is_stmt 1 view .LVU32
+ 125               	/* epilogue start */
+ 126               	.LBE5:
+ 127               	.LBE4:
+  47:uart.c        **** 		{
+  48:uart.c        **** 			_tb_write = _tb_start;
+  49:uart.c        **** 		}
+  50:uart.c        **** 	}
+  51:uart.c        **** }
+ 128               		.loc 1 51 1 is_stmt 0 view .LVU33
+ 129 0080 0895      		ret
+ 130               		.cfi_endproc
+ 131               	.LFE3:
+ 133               	.global	uart_rx
+ 135               	uart_rx:
+ 136               	.LFB4:
+  52:uart.c        **** 
+  53:uart.c        **** int16_t uart_rx(void)
+  54:uart.c        **** {
+ 137               		.loc 1 54 1 is_stmt 1 view -0
+ 138               		.cfi_startproc
+ 139               	/* prologue: function */
+ 140               	/* frame size = 0 */
+ 141               	/* stack size = 0 */
+ 142               	.L__stack_usage = 0
+  55:uart.c        **** 	int16_t c = -1;
+ 143               		.loc 1 55 2 view .LVU35
+ 144               	.LVL1:
+  56:uart.c        **** 	if(_avail)
+ 145               		.loc 1 56 2 view .LVU36
+ 146               		.loc 1 56 5 is_stmt 0 view .LVU37
+ 147 0082 8091 0000 		lds r24,_avail
+ 148               		.loc 1 56 4 view .LVU38
+ 149 0086 8823      		tst r24
+ 150 0088 01F0      		breq .L11
+  57:uart.c        **** 	{
+  58:uart.c        **** 		--_avail;
+ 151               		.loc 1 58 3 is_stmt 1 view .LVU39
+ 152 008a 8091 0000 		lds r24,_avail
+ 153 008e 8150      		subi r24,lo8(-(-1))
+ 154 0090 8093 0000 		sts _avail,r24
+  59:uart.c        **** 		c = *_rb_read++;
+ 155               		.loc 1 59 3 view .LVU40
+ 156               		.loc 1 59 16 is_stmt 0 view .LVU41
+ 157 0094 E091 0000 		lds r30,_rb_read
+ 158 0098 F091 0000 		lds r31,_rb_read+1
+ 159 009c CF01      		movw r24,r30
+ 160 009e 0196      		adiw r24,1
+ 161 00a0 9093 0000 		sts _rb_read+1,r25
+ 162 00a4 8093 0000 		sts _rb_read,r24
+ 163               		.loc 1 59 7 view .LVU42
+ 164 00a8 8081      		ld r24,Z
+ 165               		.loc 1 59 5 view .LVU43
+ 166 00aa 90E0      		ldi r25,0
+ 167               	.LVL2:
+  60:uart.c        **** 		if(_rb_read == _rb_end)
+ 168               		.loc 1 60 3 is_stmt 1 view .LVU44
+ 169 00ac 0895      		ret
+ 170               	.LVL3:
+ 171               	.L11:
+  55:uart.c        **** 	if(_avail)
+ 172               		.loc 1 55 10 is_stmt 0 view .LVU45
+ 173 00ae 8FEF      		ldi r24,lo8(-1)
+ 174 00b0 9FEF      		ldi r25,lo8(-1)
+  61:uart.c        **** 		{
+  62:uart.c        **** 			_rb_read = _rb_start;
+  63:uart.c        **** 		}
+  64:uart.c        **** 	}
+  65:uart.c        **** 
+  66:uart.c        **** 	return c;
+ 175               		.loc 1 66 2 is_stmt 1 view .LVU46
+ 176               	/* epilogue start */
+  67:uart.c        **** }
+ 177               		.loc 1 67 1 is_stmt 0 view .LVU47
+ 178 00b2 0895      		ret
+ 179               		.cfi_endproc
+ 180               	.LFE4:
+ 182               	.global	uart_tx_str
+ 184               	uart_tx_str:
+ 185               	.LVL4:
+ 186               	.LFB5:
+  68:uart.c        **** 
+  69:uart.c        **** void uart_tx_str(const char *s)
+  70:uart.c        **** {
+ 187               		.loc 1 70 1 is_stmt 1 view -0
+ 188               		.cfi_startproc
+ 189               		.loc 1 70 1 is_stmt 0 view .LVU49
+ 190 00b4 CF93      		push r28
+ 191               	.LCFI0:
+ 192               		.cfi_def_cfa_offset 3
+ 193               		.cfi_offset 28, -2
+ 194 00b6 DF93      		push r29
+ 195               	.LCFI1:
+ 196               		.cfi_def_cfa_offset 4
+ 197               		.cfi_offset 29, -3
+ 198               	/* prologue: function */
+ 199               	/* frame size = 0 */
+ 200               	/* stack size = 2 */
+ 201               	.L__stack_usage = 2
+  71:uart.c        **** 	register char c;
+ 202               		.loc 1 71 2 is_stmt 1 view .LVU50
+  72:uart.c        **** 	while((c = *s++))
+ 203               		.loc 1 72 2 view .LVU51
+ 204               	.L13:
+ 205               	.LVL5:
+ 206               		.loc 1 72 7 view .LVU52
+ 207               		.loc 1 72 15 is_stmt 0 view .LVU53
+ 208 00b8 EC01      		movw r28,r24
+ 209               	.LVL6:
+ 210               		.loc 1 72 11 view .LVU54
+ 211 00ba 8991      		ld r24,Y+
+ 212               	.LVL7:
+ 213               		.loc 1 72 7 view .LVU55
+ 214 00bc 8111      		cpse r24,__zero_reg__
+ 215 00be 00C0      		rjmp .L14
+ 216               	/* epilogue start */
+  73:uart.c        **** 	{
+  74:uart.c        **** 		uart_tx(c);
+  75:uart.c        **** 	}
+  76:uart.c        **** }
+ 217               		.loc 1 76 1 view .LVU56
+ 218 00c0 DF91      		pop r29
+ 219 00c2 CF91      		pop r28
+ 220               	.LVL8:
+ 221               		.loc 1 76 1 view .LVU57
+ 222 00c4 0895      		ret
+ 223               	.LVL9:
+ 224               	.L14:
+  74:uart.c        **** 	}
+ 225               		.loc 1 74 3 is_stmt 1 view .LVU58
+ 226 00c6 0E94 0000 		call uart_tx
+ 227               	.LVL10:
+  72:uart.c        **** 	while((c = *s++))
+ 228               		.loc 1 72 15 is_stmt 0 view .LVU59
+ 229 00ca CE01      		movw r24,r28
+ 230 00cc 00C0      		rjmp .L13
+ 231               		.cfi_endproc
+ 232               	.LFE5:
+ 234               	.global	uart_tx_str_P
+ 236               	uart_tx_str_P:
+ 237               	.LVL11:
+ 238               	.LFB6:
+  77:uart.c        **** 
+  78:uart.c        **** void uart_tx_str_P(const char *s)
+  79:uart.c        **** {
+ 239               		.loc 1 79 1 is_stmt 1 view -0
+ 240               		.cfi_startproc
+ 241               		.loc 1 79 1 is_stmt 0 view .LVU61
+ 242 00ce CF93      		push r28
+ 243               	.LCFI2:
+ 244               		.cfi_def_cfa_offset 3
+ 245               		.cfi_offset 28, -2
+ 246 00d0 DF93      		push r29
+ 247               	.LCFI3:
+ 248               		.cfi_def_cfa_offset 4
+ 249               		.cfi_offset 29, -3
+ 250               	/* prologue: function */
+ 251               	/* frame size = 0 */
+ 252               	/* stack size = 2 */
+ 253               	.L__stack_usage = 2
+ 254 00d2 EC01      		movw r28,r24
+  80:uart.c        **** 	register char c;
+ 255               		.loc 1 80 2 is_stmt 1 view .LVU62
+  81:uart.c        **** 	while((c = pgm_read_byte(s++)))
+ 256               		.loc 1 81 2 view .LVU63
+ 257               	.LVL12:
+ 258               	.L16:
+ 259               		.loc 1 81 7 view .LVU64
+ 260               	.LBB6:
+ 261               		.loc 1 81 13 view .LVU65
+ 262               		.loc 1 81 13 view .LVU66
+ 263               		.loc 1 81 13 view .LVU67
+ 264 00d4 FE01      		movw r30,r28
+ 265               	/* #APP */
+ 266               	 ;  81 "uart.c" 1
+ 267 00d6 8491      		lpm r24, Z
+ 268               		
+ 269               	 ;  0 "" 2
+ 270               	.LVL13:
+ 271               		.loc 1 81 13 view .LVU68
+ 272               		.loc 1 81 13 is_stmt 0 view .LVU69
+ 273               	/* #NOAPP */
+ 274               	.LBE6:
+ 275               		.loc 1 81 7 view .LVU70
+ 276 00d8 2196      		adiw r28,1
+ 277               	.LVL14:
+ 278               		.loc 1 81 7 view .LVU71
+ 279 00da 8111      		cpse r24,__zero_reg__
+ 280 00dc 00C0      		rjmp .L17
+ 281               	/* epilogue start */
+  82:uart.c        **** 	{
+  83:uart.c        **** 		uart_tx(c);
+  84:uart.c        **** 	}
+  85:uart.c        **** }
+ 282               		.loc 1 85 1 view .LVU72
+ 283 00de DF91      		pop r29
+ 284 00e0 CF91      		pop r28
+ 285               	.LVL15:
+ 286               		.loc 1 85 1 view .LVU73
+ 287 00e2 0895      		ret
+ 288               	.LVL16:
+ 289               	.L17:
+  83:uart.c        **** 	}
+ 290               		.loc 1 83 3 is_stmt 1 view .LVU74
+ 291 00e4 0E94 0000 		call uart_tx
+ 292               	.LVL17:
+  83:uart.c        **** 	}
+ 293               		.loc 1 83 3 is_stmt 0 view .LVU75
+ 294 00e8 00C0      		rjmp .L16
+ 295               		.cfi_endproc
+ 296               	.LFE6:
+ 298               	.global	__vector_18
+ 300               	__vector_18:
+ 301               	.LFB7:
+  86:uart.c        **** 
+  87:uart.c        **** ISR(USART_RX_vect)
+  88:uart.c        **** {
+ 302               		.loc 1 88 1 is_stmt 1 view -0
+ 303               		.cfi_startproc
+ 304 00ea 8F93 8FB7 		__gcc_isr 1
+ 304      8F93 
+ 305 00f0 9F93      		push r25
+ 306               	.LCFI4:
+ 307               		.cfi_def_cfa_offset 3
+ 308               		.cfi_offset 25, -2
+ 309 00f2 EF93      		push r30
+ 310               	.LCFI5:
+ 311               		.cfi_def_cfa_offset 4
+ 312               		.cfi_offset 30, -3
+ 313 00f4 FF93      		push r31
+ 314               	.LCFI6:
+ 315               		.cfi_def_cfa_offset 5
+ 316               		.cfi_offset 31, -4
+ 317               	/* prologue: Signal */
+ 318               	/* frame size = 0 */
+ 319               	/* stack size = 3...7 */
+ 320               	.L__stack_usage = 3 + __gcc_isr.n_pushed
+  89:uart.c        **** 	if(_avail < UART_RECEIVE_BUFFER_SIZE)
+ 321               		.loc 1 89 2 view .LVU77
+ 322               		.loc 1 89 12 is_stmt 0 view .LVU78
+ 323 00f6 8091 0000 		lds r24,_avail
+ 324               		.loc 1 89 4 view .LVU79
+ 325 00fa 8031      		cpi r24,lo8(16)
+ 326 00fc 00F4      		brsh .L18
+  90:uart.c        **** 	{
+  91:uart.c        **** 		++_avail;
+ 327               		.loc 1 91 3 is_stmt 1 view .LVU80
+ 328 00fe 8091 0000 		lds r24,_avail
+ 329 0102 8F5F      		subi r24,lo8(-(1))
+ 330 0104 8093 0000 		sts _avail,r24
+  92:uart.c        **** 		*_rb_write++ = UDR0;
+ 331               		.loc 1 92 3 view .LVU81
+ 332               		.loc 1 92 13 is_stmt 0 view .LVU82
+ 333 0108 E091 0000 		lds r30,_rb_write
+ 334 010c F091 0000 		lds r31,_rb_write+1
+ 335 0110 CF01      		movw r24,r30
+ 336 0112 0196      		adiw r24,1
+ 337 0114 9093 0000 		sts _rb_write+1,r25
+ 338 0118 8093 0000 		sts _rb_write,r24
+ 339               		.loc 1 92 18 view .LVU83
+ 340 011c 8091 C600 		lds r24,198
+ 341               		.loc 1 92 16 view .LVU84
+ 342 0120 8083      		st Z,r24
+  93:uart.c        **** 		if(_rb_write == _rb_end)
+ 343               		.loc 1 93 3 is_stmt 1 view .LVU85
+ 344               	.L18:
+ 345               	/* epilogue start */
+  94:uart.c        **** 		{
+  95:uart.c        **** 			_rb_write = _rb_start;
+  96:uart.c        **** 		}
+  97:uart.c        **** 	}
+  98:uart.c        **** }
+ 346               		.loc 1 98 1 is_stmt 0 view .LVU86
+ 347 0122 FF91      		pop r31
+ 348 0124 EF91      		pop r30
+ 349 0126 9F91      		pop r25
+ 350 0128 8F91 8FBF 		__gcc_isr 2
+ 350      8F91 
+ 351 012e 1895      		reti
+ 352               		__gcc_isr 0,r24
+ 353               		.cfi_endproc
+ 354               	.LFE7:
+ 356               	.global	__vector_19
+ 358               	__vector_19:
+ 359               	.LFB8:
+  99:uart.c        **** 
+ 100:uart.c        **** ISR(USART_UDRE_vect)
+ 101:uart.c        **** {
+ 360               		.loc 1 101 1 is_stmt 1 view -0
+ 361               		.cfi_startproc
+ 362 0130 8F93 8FB7 		__gcc_isr 1
+ 362      8F93 
+ 363 0136 9F93      		push r25
+ 364               	.LCFI7:
+ 365               		.cfi_def_cfa_offset 3
+ 366               		.cfi_offset 25, -2
+ 367 0138 EF93      		push r30
+ 368               	.LCFI8:
+ 369               		.cfi_def_cfa_offset 4
+ 370               		.cfi_offset 30, -3
+ 371 013a FF93      		push r31
+ 372               	.LCFI9:
+ 373               		.cfi_def_cfa_offset 5
+ 374               		.cfi_offset 31, -4
+ 375               	/* prologue: Signal */
+ 376               	/* frame size = 0 */
+ 377               	/* stack size = 3...7 */
+ 378               	.L__stack_usage = 3 + __gcc_isr.n_pushed
+ 102:uart.c        **** 	if(_tb_available)
+ 379               		.loc 1 102 2 view .LVU88
+ 380               		.loc 1 102 5 is_stmt 0 view .LVU89
+ 381 013c 8091 0000 		lds r24,_tb_available
+ 382               		.loc 1 102 4 view .LVU90
+ 383 0140 8823      		tst r24
+ 384 0142 01F0      		breq .L20
+ 103:uart.c        **** 	{
+ 104:uart.c        **** 		--_tb_available;
+ 385               		.loc 1 104 3 is_stmt 1 view .LVU91
+ 386 0144 8091 0000 		lds r24,_tb_available
+ 387 0148 8150      		subi r24,lo8(-(-1))
+ 388 014a 8093 0000 		sts _tb_available,r24
+ 105:uart.c        **** 		UDR0 = *_tb_read++;
+ 389               		.loc 1 105 3 view .LVU92
+ 390               		.loc 1 105 19 is_stmt 0 view .LVU93
+ 391 014e E091 0000 		lds r30,_tb_read
+ 392 0152 F091 0000 		lds r31,_tb_read+1
+ 393 0156 CF01      		movw r24,r30
+ 394 0158 0196      		adiw r24,1
+ 395 015a 9093 0000 		sts _tb_read+1,r25
+ 396 015e 8093 0000 		sts _tb_read,r24
+ 397               		.loc 1 105 10 view .LVU94
+ 398 0162 8081      		ld r24,Z
+ 399               		.loc 1 105 8 view .LVU95
+ 400 0164 8093 C600 		sts 198,r24
+ 106:uart.c        **** 		if(_tb_read == _tb_end)
+ 401               		.loc 1 106 3 is_stmt 1 view .LVU96
+ 402               		.loc 1 106 5 is_stmt 0 view .LVU97
+ 403 0168 8091 0000 		lds r24,_tb_read
+ 404 016c 9091 0000 		lds r25,_tb_read+1
+ 405 0170 0097      		sbiw r24,0
+ 406 0172 01F4      		brne .L20
+ 107:uart.c        **** 		{
+ 108:uart.c        **** 			_tb_read = _tb_start;
+ 407               		.loc 1 108 4 is_stmt 1 view .LVU98
+ 408               		.loc 1 108 13 is_stmt 0 view .LVU99
+ 409 0174 80E0      		ldi r24,lo8(_tb_start)
+ 410 0176 90E0      		ldi r25,hi8(_tb_start)
+ 411 0178 9093 0000 		sts _tb_read+1,r25
+ 412 017c 8093 0000 		sts _tb_read,r24
+ 413               	.L20:
+ 414               	/* epilogue start */
+ 109:uart.c        **** 		}
+ 110:uart.c        **** 	}
+ 111:uart.c        **** }
+ 415               		.loc 1 111 1 view .LVU100
+ 416 0180 FF91      		pop r31
+ 417 0182 EF91      		pop r30
+ 418 0184 9F91      		pop r25
+ 419 0186 8F91 8FBF 		__gcc_isr 2
+ 419      8F91 
+ 420 018c 1895      		reti
+ 421               		__gcc_isr 0,r24
+ 422               		.cfi_endproc
+ 423               	.LFE8:
+ 425               		.local	_tb_write
+ 426               		.comm	_tb_write,2,1
+ 427               		.local	_tb_read
+ 428               		.comm	_tb_read,2,1
+ 429               		.local	_tb_start
+ 430               		.comm	_tb_start,16,1
+ 431               		.local	_tb_available
+ 432               		.comm	_tb_available,1,1
+ 433               		.local	_rb_write
+ 434               		.comm	_rb_write,2,1
+ 435               		.local	_rb_read
+ 436               		.comm	_rb_read,2,1
+ 437               		.local	_rb_start
+ 438               		.comm	_rb_start,16,1
+ 439               		.local	_avail
+ 440               		.comm	_avail,1,1
+ 441               	.Letext0:
+ 442               		.file 2 "/usr/avr/include/stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 uart.c
+     /tmp/ccmg2jRB.s:2      *ABS*:000000000000003e __SP_H__
+     /tmp/ccmg2jRB.s:3      *ABS*:000000000000003d __SP_L__
+     /tmp/ccmg2jRB.s:4      *ABS*:000000000000003f __SREG__
+     /tmp/ccmg2jRB.s:5      *ABS*:0000000000000000 __tmp_reg__
+     /tmp/ccmg2jRB.s:6      *ABS*:0000000000000001 __zero_reg__
+     /tmp/ccmg2jRB.s:12     .text:0000000000000000 uart_init
+     /tmp/ccmg2jRB.s:436    .bss:0000000000000019 _rb_start
+     /tmp/ccmg2jRB.s:432    .bss:0000000000000015 _rb_write
+     /tmp/ccmg2jRB.s:434    .bss:0000000000000017 _rb_read
+     /tmp/ccmg2jRB.s:428    .bss:0000000000000004 _tb_start
+                             .bss:0000000000000000 _tb_write
+     /tmp/ccmg2jRB.s:426    .bss:0000000000000002 _tb_read
+     /tmp/ccmg2jRB.s:61     .text:0000000000000042 uart_available
+     /tmp/ccmg2jRB.s:438    .bss:0000000000000029 _avail
+     /tmp/ccmg2jRB.s:80     .text:0000000000000048 uart_tx
+     /tmp/ccmg2jRB.s:430    .bss:0000000000000014 _tb_available
+     /tmp/ccmg2jRB.s:135    .text:0000000000000082 uart_rx
+     /tmp/ccmg2jRB.s:184    .text:00000000000000b4 uart_tx_str
+     /tmp/ccmg2jRB.s:236    .text:00000000000000ce uart_tx_str_P
+     /tmp/ccmg2jRB.s:300    .text:00000000000000ea __vector_18
+                            *ABS*:0000000000000002 __gcc_isr.n_pushed.001
+     /tmp/ccmg2jRB.s:358    .text:0000000000000130 __vector_19
+                            *ABS*:0000000000000002 __gcc_isr.n_pushed.002
+
+UNDEFINED SYMBOLS
+__do_clear_bss
